@@ -8,11 +8,13 @@ use regex::Regex;
 #[derive(Parser)]
 #[clap(
     version,
-    about = "Search your $PATH for an executable that matches a regex"
+    about = "Search your $PATH for executables that match a regex"
 )]
 struct Args {
     #[arg(short, long, help = "Complain about non-extant directories in $PATH")]
     complain: bool,
+    #[arg(short, long, help = "Print directories being searched")]
+    print_path: bool,
     #[arg(help = "Regex to search for")]
     regex: Option<String>,
 }
@@ -27,6 +29,10 @@ fn main() -> ExitCode {
     let re = Regex::new(&args.regex.unwrap()).expect("Failed to compile regex");
     let mut found = false;
     for dir in env::split_paths(&env::var_os("PATH").expect("$PATH is not set")) {
+        if args.print_path {
+            println!("{}", dir.display());
+        }
+
         if !dir.is_dir() {
             if args.complain {
                 eprintln!("Not a directory: {}", dir.display());
@@ -42,8 +48,13 @@ fn main() -> ExitCode {
             }
             let stem = path.file_stem().unwrap();
             if re.is_match(&stem.to_string_lossy()) {
-                println!("{}", path.display());
                 found = true;
+
+                if args.print_path {
+                    println!("  {}", stem.display());
+                } else {
+                    println!("{}", path.display());
+                }
             }
         }
     }
